@@ -39,7 +39,7 @@ namespace MC.GAS.Controllers.Timed {
          */
         public construct(resolver: MC.GAS.DI.IDependencyResolver): void {
             this._logger = resolver.resolve("ILogger") as MC.GAS.Logging.ILogger;
-            this._accessGuard = resolver.resolve("SheetWriteAccessGuard") as MC.GAS.Handlers.WriteAccessHandler;
+            this._accessGuard = resolver.resolve("WriteAccessHandler") as MC.GAS.Handlers.WriteAccessHandler;
             this._actions = resolver.resolveCollection("ITimedAction") as ITimedAction[];
         }
 

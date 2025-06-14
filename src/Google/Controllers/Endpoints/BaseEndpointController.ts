@@ -56,7 +56,7 @@ namespace MC.GAS.Controllers.Endpoints {
         public construct(resolver: MC.GAS.DI.IDependencyResolver): void {
             this._logger = resolver.resolve("ILogger") as MC.GAS.Logging.ILogger;
             this._configurationProvider = resolver.resolve("IConfigurationProvider") as MC.GAS.Config.IConfigurationProvider;
-            this._accessGuard = resolver.resolve("SheetWriteAccessGuard") as MC.GAS.Handlers.WriteAccessHandler;
+            this._accessGuard = resolver.resolve("WriteAccessHandler") as MC.GAS.Handlers.WriteAccessHandler;
             let operations = resolver.resolveCollection("IEndpointOperation") as IEndpointOperation[];
             this._operations = new MC.GAS.Dictionary<IEndpointOperation>();
             for (let i = 0; i < operations.length; ++i) {
