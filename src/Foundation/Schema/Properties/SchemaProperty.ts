@@ -122,10 +122,10 @@ namespace MC.GAS.Schema {
             this._failureReason = "";
 
             // Check that the property exists in the object
-            if (!(this._name in obj)) {
+            if (obj[this._name] === undefined) {
                 // If this is optional, then no problem
                 if (this._isOptional) {
-                    return;
+                    return true;
                 }
 
                 // We're missing the value

@@ -76,7 +76,7 @@ namespace MC.GAS.Schema {
          * @returns Returns true if the named property is not included in the object
          */
         public isValid(obj: MC.GAS.JObject): boolean {
-            return !(this._name in obj);
+            return obj[this._name] === undefined;
         }
     }
 }
