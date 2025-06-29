@@ -83,6 +83,12 @@ namespace MC.GAS.PushNotifications {
          * @returns Returns true if the message was able to be sent to the receivers
          */
         public trySendPushNotification(data: MC.GAS.PushNotifications.PushNotificationData): boolean {
+            // Figure out if there is a callback that can be used
+            let htmlBody = null;
+            if (data.callbackUrl) {
+                htmlBody = `<p>${data.body}</p><br><br><a href="${data.callbackUrl}">See here for additional information</a>`;
+            }
+
             // Blanket, we send the message without exception and we are successful
             try {
                 GmailApp.sendEmail(
@@ -90,6 +96,7 @@ namespace MC.GAS.PushNotifications {
                     data.title,
                     data.body,
                     {
+                        htmlBody: htmlBody,
                         from: this._preferences.senderAlias
                     }
                 );
