@@ -130,6 +130,93 @@ namespace MC.GAS.Objects {
         }
 
         /**
+         * Insert the supplied collection of data into a data buffer as dictated by the contained properties
+         * @param buffer The buffer of data where the updated data should be inserted
+         * @param data The collection of data that is to be processed and inserted into the region
+         * @returns Returns true if the data in the buffer was updated with a new value
+         */
+        public insertDataBuffer(buffer: any[], data: InsertData<T>): boolean {
+            // We need to iterate through the properties that are available for being set
+            let updatedValue = false;
+            let maxColumns = Math.min(this._properties.length, buffer.length);
+            for (let c = 0; c < maxColumns; ++c) {
+                // If there isn't a property at this entry, we can ignore it
+                if (MC.GAS.StringExtensions.isNullOrEmpty(this._properties[c])) {
+                    continue;
+                }
+
+                // Check if there is a property in the input data that matches the expected property name
+                if (!data.hasOwnProperty(this._properties[c])) {
+                    continue;
+                }
+
+                // Check to see if the value that is to be stored has been modified
+                let newValue = (this._dataCallback && this._dataCallback.hasKey(this._properties[c]) ?
+                    this._dataCallback.get(this._properties[c])(data[this._properties[c]], data) :
+                    data[this._properties[c]]
+                );
+
+                // If the value is undefined, then we want to leave the cell as is
+                if (newValue === undefined ||
+                    newValue === buffer[c]) {
+                    continue;
+                }
+
+                // We can update the buffer with the new value
+                updatedValue = true;
+                buffer[c] = newValue;
+            }
+            return updatedValue;
+        }
+
+        /**
+         * Insert the supplied collection of data into a data buffer as dictated by the contained properties
+         * @param buffer The buffer of data where the updated data should be inserted
+         * @param rowOffset An offset into the initial dimension of the buffer to write to
+         * @param columnOffset An offset into the second dimension of the buffer to write to
+         * @param data The collection of data that is to be processed and inserted into the region
+         * @returns Returns true if the data in the buffer was updated with a new value
+         */
+        public insertOffsetDataBuffer(buffer: any[][], rowOffset: number, columnOffset: number, data: InsertData<T>): boolean {
+            // Check that the buffer has space for the specified values
+            if (rowOffset >= buffer.length) {
+                throw `IndexOutOfRangeException: Unable to write data to row ${rowOffset}, bounds of buffer is ${buffer.length}`;
+            }
+
+            // Iterate through the properties that are available to be set
+            let updatedValue = false;
+            let checkProperties = Math.min(this._properties.length, buffer[rowOffset].length - columnOffset);
+            for (let c = 0; c < checkProperties; ++c) {
+                // If there isn't a property at this entry, we can ignore it
+                if (MC.GAS.StringExtensions.isNullOrEmpty(this._properties[c])) {
+                    continue;
+                }
+
+                // Check if there is a property in the input data that matches the expected property name
+                if (!data.hasOwnProperty(this._properties[c])) {
+                    continue;
+                }
+
+                // Check to see if the value that is to be stored has been modified
+                let newValue = (this._dataCallback && this._dataCallback.hasKey(this._properties[c]) ?
+                    this._dataCallback.get(this._properties[c])(data[this._properties[c]], data) :
+                    data[this._properties[c]]
+                );
+
+                // If the value is undefined, then we want to leave the cell as is
+                if (newValue === undefined ||
+                    newValue === buffer[rowOffset][columnOffset + c]) {
+                    continue;
+                }
+
+                // We can update the buffer with the new value
+                updatedValue = true;
+                buffer[rowOffset][columnOffset + c] = newValue;
+            }
+            return updatedValue;
+        }
+
+        /**
          * Append the supplied data to the specified sheet in the order of defined properties
          * @param sheet The sheet where the data is to be appended to
          * @param data The data source where information is to be extracted for insertion
