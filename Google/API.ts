@@ -203,7 +203,7 @@ export abstract class APIBase {
 
                 // If we got here, then we failed to match the data against the failure schema
                 return new ErrorResponse(
-                    `An unexpected error occurred. Received a failure response (${responseCode}) from '${endpoint}' but was unable to match against the failure schema\n${failureHandler.schema.failureReason}`,
+                    `An unexpected error occurred. Received a failure response (${responseCode}) from '${endpoint}' but was unable to match against the failure schema: ${failureHandler.schema.failureReason}`,
                     422
                 );
             }
@@ -215,7 +215,7 @@ export abstract class APIBase {
 
             // If we couldn't match, it means the data has changed format
             return new ErrorResponse(
-                `An unexpected error occurred. Received a success response (${responseCode}) from '${endpoint}' but was unable to match against the success schema\n${successHandler.schema.failureReason}`,
+                `An unexpected error occurred. Received a success response (${responseCode}) from '${endpoint}' but was unable to match against the success schema: ${successHandler.schema.failureReason}`,
                 422
             );
         }
@@ -223,7 +223,7 @@ export abstract class APIBase {
         // Anything goes wrong, we're going to make a generic fail response
         catch (ex: any) {
             return new ErrorResponse(
-                `An unexpected error occurred when processing the response of '${endpoint}'\n${ex.toString()}`,
+                `An unexpected error occurred when processing the response of '${endpoint}': ${ex.toString()}`,
                 500
             );
         }

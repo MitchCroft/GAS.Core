@@ -40,7 +40,7 @@ export class Schema implements IValidateObject {
      * @returns Returns a string that describes the action of the object
      */
     public get displayString(): string {
-        return `{\n\t${this._properties.map(x => `"${x.name}": "${x.displayString}"`).join("\n\t")}\n}`;
+        return `{${this._properties.map(x => `"${x.name}": "${x.displayString}"`).join(",\t")}}`;
     }
 
     /**
@@ -108,7 +108,7 @@ export class Schema implements IValidateObject {
             if (this._failureReason === "") {
                 this._failureReason = this._properties[i].failureReason;
             } else {
-                this._failureReason += `\n${this._properties[i].failureReason}`;
+                this._failureReason += `\t${this._properties[i].failureReason}`;
             }
         }
         return success;

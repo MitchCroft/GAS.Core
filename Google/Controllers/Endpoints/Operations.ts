@@ -79,7 +79,7 @@ export abstract class BaseEndpointOperation<TInput, TOutput extends DefaultEndpo
         catch (ex) {
             return {
                 code: 500,
-                error: `An unexpected exception was thrown while processing the request\n${ex}`,
+                error: `An unexpected exception was thrown while processing the request: ${ex}`,
                 notes: this.name
             };
         }

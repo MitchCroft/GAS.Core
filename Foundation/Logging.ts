@@ -68,6 +68,6 @@ export class ConsoleLogging implements ILogger {
      * @param exception The exception that occurred
      */
     exception(message: any, exception: any): void {
-        console.error(`[EXP] ${message}\n${exception}`);
+        console.error(`[EXP] ${message} - ${exception}`);
     }
 }

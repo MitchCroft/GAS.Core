@@ -180,7 +180,7 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
             return this.formatResultObject(
                 {
                     code: 500,
-                    error: `An unexpected exception was thrown while processing the request\n${ex}`,
+                    error: `An unexpected exception was thrown while processing the request: ${ex}`,
                     notes: null
                 },
                 operationOutputSchema
@@ -252,7 +252,7 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
             if (!formatSchema[i]!.isValid(payload)) {
                 return this.formatResultObject({
                     code: 422,
-                    error: `Return object failed to meet schema requirements\n${formatSchema[i]!.failureReason}`,
+                    error: `Return object failed to meet schema requirements: ${formatSchema[i]!.failureReason}`,
                     notes: JSON.stringify(payload)
                 });
             }

@@ -37,6 +37,6 @@ export class GASLogger implements ILogger {
      * @param exception The exception that occurred
      */
     public exception(message: any, exception: any): void {
-        Logger.log(`[EXP] ${message}\n${exception}`);
+        Logger.log(`[EXP] ${message} - ${exception}`);
     }
 }
