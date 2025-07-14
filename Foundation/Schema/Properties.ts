@@ -109,6 +109,9 @@ export class SchemaProperty implements ISchemaProperty {
      * @comment This should only apply the default if the application would normally fail
      */
     public testApplyDefault(obj: JObject): void {
+        if (this._defaultValue === undefined) {
+            return;
+        }
         if (!this.isValid(obj)) {
             obj[this._name] = this._defaultValue;
         }
