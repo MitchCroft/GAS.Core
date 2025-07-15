@@ -131,15 +131,13 @@ export class PushNotificationDispatcher implements IInjectionTarget, IInitialisa
         // Test the handlers to see if there is one we can use
         for (let i = 0; i < this._notificationHandlers.length; ++i) {
             // Check to see if this handler can be used
-            if (this._notificationHandlers[i].enabled) {
+            if (this._notificationHandlers[i].enabled === false) {
                 continue;
             }
 
             // Try to send the notification via the handler
-            if (this._notificationHandlers[i].trySendPushNotification(data)) {
-                if (this._logger) {
-                    this._logger.error(`Was unable to send a push notification via handler ${i} '${this._notificationHandlers[i]}'`);
-                }
+            if (this._notificationHandlers[i].trySendPushNotification(data) === false) {
+                this._logger?.error(`Was unable to send a push notification via handler ${i} '${this._notificationHandlers[i]}'`);
                 continue;
             }
 
@@ -151,14 +149,12 @@ export class PushNotificationDispatcher implements IInjectionTarget, IInitialisa
         }
 
         // We're good if we could find a dispatcher to send the message via
-        if (success) {
+        if (success === true) {
             return true;
         }
 
         // Otherwise, we may have a problem
-        if (this._logger) {
-            this._logger.error(`PushNotificationDispatcher: Failed to find a IPushNotificationHandler instance (out of ${this._notificationHandlers.length}) that could dispatch a message`);
-        }
+        this._logger?.error(`PushNotificationDispatcher: Failed to find a IPushNotificationHandler instance (out of ${this._notificationHandlers.length}) that could dispatch a message`);
         return false;
     }
 }
