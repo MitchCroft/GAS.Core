@@ -150,7 +150,6 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
 
             // We can get the operation to do additional checks
             let operation = this._operations.get(inputData.operation);
-            operationOutputSchema = operation.getOutputSchema();
 
             // If there is an input schema, check to make sure the values are good
             let operationInputSchema = operation.getInputSchema();
@@ -162,13 +161,13 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
                             code: 422,
                             error: operationInputSchema.failureReason,
                             notes: operation.name
-                        },
-                        operationOutputSchema
+                        }
                     );
                 }
             }
 
             // Run the operation and handle the result format
+            operationOutputSchema = operation.getOutputSchema();
             return this.formatResultObject(
                 operation.requiresWrite ? this.executeWriteSafeOperation(operation, inputData) : operation.execute(inputData),
                 operationOutputSchema
