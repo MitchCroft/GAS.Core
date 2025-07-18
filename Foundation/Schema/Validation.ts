@@ -90,6 +90,11 @@ export class ArrayValueValidation implements IValueValidation {
             return false;
         }
 
+        // If the array is empty, that's an automatic valid
+        if (value.length === 0) {
+            return true;
+        }
+
         // Check over the rules that are contained to determine if they can apply
         if (this._childRules) {
             for (let i = 0; i < value.length; ++i) {
