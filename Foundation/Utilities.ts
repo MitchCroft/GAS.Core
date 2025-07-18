@@ -33,4 +33,14 @@ export class DateUtility {
     public static format_yyyy_MM_dd(date: Date, separator: string = "_"): string {
         return `${date.getFullYear()}${separator}${(date.getMonth() + 1).toString().padStart(2, '0')}${separator}${date.getDate().toString().padStart(2, '0')}`;
     }
+
+    /**
+     * Check to see if an object is a Date object that can be used
+     * @param obj The instance object that is to be checked
+     * @returns Returns true if the object is a date object that can be used
+     */
+    public static isDate(obj: any): obj is Date {
+        return (Object.prototype.toString.call(obj) === "[object Date]" &&
+                !isNaN((obj as Date).getTime()));
+    }
 }
