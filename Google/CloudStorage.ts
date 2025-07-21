@@ -12,6 +12,24 @@ export class GoogleCloudStorage implements ICloudStorage {
     //PUBLIC
 
     /**
+     * Retrieve the directory object with the specified ID
+     * @param id The ID of the directory that is to be retrieved
+     * @returns Returns the Directory object that corresponds to the ID
+     */
+    public getDirectory(id: string): Directory {
+        return this.createDirectoryObject(DriveApp.getFolderById(id));
+    }
+
+    /**
+     * Retrieve the file object with the specified ID
+     * @param id The ID of the file that is to be retrieved
+     * @returns Returns the File object that corresponds to the ID
+     */
+    public getFile(id: string): File {
+        return this.createFileObject(DriveApp.getFileById(id));
+    }
+
+    /**
      * Ensure that a specific directory exists within the cloud storage platform
      * @param path The path that is to be ensured exists, delineated with '/' characters. E.g. Parent/Child/Final/
      * @param parent [Optional] The parent directory that the specified path should be relative to. If null, will use the root drive folder
@@ -67,7 +85,8 @@ export class GoogleCloudStorage implements ICloudStorage {
      * @param metadata The collection of meta data entries that should be assigned to the file
      */
     public setFileMetadata(file: File, metadata: Mapping<string>): void {
-        Drive.Files.update({ properties: metadata }, file.id);
+        let resourceFile = DriveApp.getFileById(file.id);
+        resourceFile.setDescription(JSON.stringify(metadata));
     }
 
     /**
@@ -76,8 +95,9 @@ export class GoogleCloudStorage implements ICloudStorage {
      * @returns Returns the URL for external resource access
      */
     public getFileShareLink(file: File): string {
-        let metaData = Drive.Files.get(file.id, { fields: 'webViewLink' });
-        return metaData.webViewLink ?? "";
+        let resourceFile = DriveApp.getFileById(file.id);
+        resourceFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+        return resourceFile.getUrl();
     }
 
     //PRIVATE

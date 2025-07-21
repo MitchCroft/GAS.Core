@@ -5,12 +5,22 @@ import { Directory, File } from "./Objects";
  * Basic outline of the class that will be used to process interactions with a cloud storage platform
  */
 export interface ICloudStorage {
-    /*----------Properties----------*/
-    //PUBLIC
-
-
     /*----------Functions----------*/
     //PUBLIC
+
+    /**
+     * Retrieve the directory object with the specified ID
+     * @param id The ID of the directory that is to be retrieved
+     * @returns Returns the Directory object that corresponds to the ID
+     */
+    getDirectory(id: string): Directory;
+
+    /**
+     * Retrieve the file object with the specified ID
+     * @param id The ID of the file that is to be retrieved
+     * @returns Returns the File object that corresponds to the ID
+     */
+    getFile(id: string): File;
 
     /**
      * Ensure that a specific directory exists within the cloud storage platform
