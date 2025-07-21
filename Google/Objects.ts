@@ -9,7 +9,7 @@ export type DataCallback<T> = (value: any, data: T) => any;
 /**
  * Defines a callback type that can be used to format data in the region formatter when processing notes to apply to a region
  */
-export type NotesCallback<T> = (value: any, data: T) => string;
+export type NotesCallback<T> = (value: any, data: T) => string | null;
 
 /**
  * Type alias for the type of data that can be inserted into the region formatter
@@ -37,7 +37,7 @@ export class SpreadsheetRegionFormatter<T> {
     /**
      * The collection of properties that are to be inserted into the data
      */
-    private _properties: string[];
+    private _properties: (string | null)[];
 
     /**
      * Lookup dictionary that can be used to retrieve the index of the specified property
@@ -80,7 +80,7 @@ export class SpreadsheetRegionFormatter<T> {
      * @param data [Optional] A lookup of callback functions that can be used to format input data for display
      * @param notes [Optional] A lookup of callback functions that can be used to format input data for settings notes
      */
-    public constructor(properties: string[],
+    public constructor(properties: (string | null)[],
                        formatting?: Dictionary<string> | null | undefined,
                        data?: Dictionary<DataCallback<T>> | null | undefined,
                        notes?: Dictionary<NotesCallback<T>> | null | undefined) {
@@ -93,13 +93,11 @@ export class SpreadsheetRegionFormatter<T> {
         // Create the index lookup collection that is needed
         this._indexLookup = new Dictionary<number>();
         for (let i = 0; i < this._properties.length; ++i) {
-            if (!this._properties[i]) {
+            let prop = this._properties[i];
+            if (StringExtensions.isNullOrEmpty(prop)) {
                 continue;
             }
-            this._indexLookup.replace(
-                this._properties[i],
-                i
-            );
+            this._indexLookup.replace(prop, i);
         }
     }
 
@@ -168,19 +166,20 @@ export class SpreadsheetRegionFormatter<T> {
         let maxColumns = Math.min(this._properties.length, buffer.length);
         for (let c = 0; c < maxColumns; ++c) {
             // If there isn't a property at this entry, we can ignore it
-            if (StringExtensions.isNullOrEmpty(this._properties[c])) {
+            let prop = this._properties[c];
+            if (StringExtensions.isNullOrEmpty(prop)) {
                 continue;
             }
 
             // Check if there is a property in the input data that matches the expected property name
-            if (!data.hasOwnProperty(this._properties[c])) {
+            if (!data.hasOwnProperty(prop)) {
                 continue;
             }
 
             // Check to see if the value that is to be stored has been modified
-            let newValue = (this._dataCallback && this._dataCallback.hasKey(this._properties[c]) ?
-                this._dataCallback.get(this._properties[c])(data[this._properties[c]], data) :
-                data[this._properties[c]]
+            let newValue = (this._dataCallback && this._dataCallback.hasKey(prop) ?
+                this._dataCallback.get(prop)(data[prop], data) :
+                data[prop]
             );
 
             // If the value is undefined, then we want to leave the cell as is
@@ -215,19 +214,20 @@ export class SpreadsheetRegionFormatter<T> {
         let checkProperties = Math.min(this._properties.length, buffer[rowOffset].length - columnOffset);
         for (let c = 0; c < checkProperties; ++c) {
             // If there isn't a property at this entry, we can ignore it
-            if (StringExtensions.isNullOrEmpty(this._properties[c])) {
+            let prop = this._properties[c];
+            if (StringExtensions.isNullOrEmpty(prop)) {
                 continue;
             }
 
             // Check if there is a property in the input data that matches the expected property name
-            if (!data.hasOwnProperty(this._properties[c])) {
+            if (!data.hasOwnProperty(prop)) {
                 continue;
             }
 
             // Check to see if the value that is to be stored has been modified
-            let newValue = (this._dataCallback && this._dataCallback.hasKey(this._properties[c]) ?
-                this._dataCallback.get(this._properties[c])(data[this._properties[c]], data) :
-                data[this._properties[c]]
+            let newValue = (this._dataCallback && this._dataCallback.hasKey(prop) ?
+                this._dataCallback.get(prop)(data[prop], data) :
+                data[prop]
             );
 
             // If the value is undefined, then we want to leave the cell as is
@@ -256,14 +256,15 @@ export class SpreadsheetRegionFormatter<T> {
         for (let i = 0; i < this._properties.length; ++i) {
             // If there isn't a property at this entry, we can ignore it
             // Or if the property doesn't exist on the data object, we can use a blank
-            if (StringExtensions.isNullOrEmpty(this._properties[i]) ||
-                !data.hasOwnProperty(this._properties[i])) {
+            let prop = this._properties[i];
+            if (StringExtensions.isNullOrEmpty(prop) ||
+                !data.hasOwnProperty(prop)) {
                 rowEntry.push("");
                 continue;
             }
 
             // Otherwise, we just add the value from the data object
-            rowEntry.push(data[this._properties[i]]);
+            rowEntry.push(data[prop]);
         }
 
         // We can append this to the bottom of the sheet
@@ -326,12 +327,13 @@ export class SpreadsheetRegionFormatter<T> {
         let checkProperties = Math.min(this._properties.length, buffer.length);
         for (let c = 0; c < checkProperties; ++c) {
             // Check to see if the property is valid
-            if (StringExtensions.isNullOrEmpty(this._properties[c])) {
+            let prop = this._properties[c];
+            if (StringExtensions.isNullOrEmpty(prop)) {
                 continue;
             }
 
             // Read in the value that is available
-            data[this._properties[c]] = buffer[c];
+            data[prop] = buffer[c];
         }
 
         // Return the object data
@@ -356,12 +358,13 @@ export class SpreadsheetRegionFormatter<T> {
         let checkProperties = Math.min(this._properties.length, buffer[rowOffset].length - columnOffset);
         for (let c = 0; c < checkProperties; ++c) {
             // Check to see if the property is valid
-            if (StringExtensions.isNullOrEmpty(this._properties[c])) {
+            let prop = this._properties[c];
+            if (StringExtensions.isNullOrEmpty(prop)) {
                 continue;
             }
 
             // Read in the value that is available
-            data[this._properties[c]] = buffer[rowOffset][columnOffset + c];
+            data[prop] = buffer[rowOffset][columnOffset + c];
         }
 
         // Return the object data
@@ -379,7 +382,7 @@ export class SpreadsheetRegionFormatter<T> {
         // Retrieve the collections of data that are going to be modified by this process
         let values = region.getValues();
         let formatting = region.getNumberFormats();
-        let notes = region.getNotes();
+        let notes: (string | null)[][] = region.getNotes();
 
         // We need to iterate through every row that is defined in the region and see if we need to modify anything
         let modifiedMask: InsertDataTypeMask = InsertDataTypeMask.None;
@@ -389,20 +392,21 @@ export class SpreadsheetRegionFormatter<T> {
             let maxColumns = Math.min(this._properties.length, values[r].length);
             for (let c = 0; c < maxColumns; ++c) {
                 // If there isn't a property at this entry, we can ignore it
-                if (StringExtensions.isNullOrEmpty(this._properties[c])) {
+                let prop = this._properties[c];
+                if (StringExtensions.isNullOrEmpty(prop)) {
                     continue;
                 }
 
                 // Check if there is a property in the input data that matches the expected property name
                 let data = dataCollection[r];
-                if (!data.hasOwnProperty(this._properties[c])) {
+                if (!data.hasOwnProperty(prop)) {
                     continue;
                 }
 
                 // Check to see if the value that is to be stored has been modified
-                let newValue = (this._dataCallback && this._dataCallback.hasKey(this._properties[c]) ?
-                    this._dataCallback.get(this._properties[c])(data[this._properties[c]], data) :
-                    data[this._properties[c]]
+                let newValue = (this._dataCallback && this._dataCallback.hasKey(prop) ?
+                    this._dataCallback.get(prop)(data[prop], data) :
+                    data[prop]
                 );
 
                 // If the value is undefined, then we want to leave the cell as is
@@ -418,8 +422,8 @@ export class SpreadsheetRegionFormatter<T> {
 
                 // Check to see if the display formatting has been changed
                 if (this._formatting) {
-                    let newFormatting = (this._formatting.hasKey(this._properties[c]) ?
-                        this._formatting.get(this._properties[c]) :
+                    let newFormatting = (this._formatting.hasKey(prop) ?
+                        this._formatting.get(prop) :
                         formatting[r][c]
                     );
                     if (newFormatting !== formatting[r][c]) {
@@ -430,8 +434,8 @@ export class SpreadsheetRegionFormatter<T> {
 
                 // Check to see if the notes have changed
                 if (this._notesCallback) {
-                    let newNote = (this._notesCallback.hasKey(this._properties[c]) ?
-                        this._notesCallback.get(this._properties[c])(data[this._properties[c]], data) :
+                    let newNote = (this._notesCallback.hasKey(prop) ?
+                        this._notesCallback.get(prop)(data[prop], data) :
                         ""
                     );
                     if (newNote !== notes[r][c]) {
@@ -466,20 +470,21 @@ export class SpreadsheetRegionFormatter<T> {
         for (let r = 0; r < maxRows; ++r) {
             for (let c = 0; c < maxColumns; ++c) {
                 // If there isn't a property at this entry, we can ignore it
-                if (StringExtensions.isNullOrEmpty(this._properties[c])) {
+                let prop = this._properties[c];
+                if (StringExtensions.isNullOrEmpty(prop)) {
                     continue;
                 }
 
                 // Check if there is a property in the input data that matches the expected property name
                 let data = dataCollection[r];
-                if (!data.hasOwnProperty(this._properties[c])) {
+                if (!data.hasOwnProperty(prop)) {
                     continue;
                 }
 
                 // Check to see if the value that is to be stored has been modified
-                let newValue = (this._dataCallback && this._dataCallback.hasKey(this._properties[c]) ?
-                    this._dataCallback.get(this._properties[c])(data[this._properties[c]], data) :
-                    data[this._properties[c]]
+                let newValue = (this._dataCallback && this._dataCallback.hasKey(prop) ?
+                    this._dataCallback.get(prop)(data[prop], data) :
+                    data[prop]
                 );
 
                 // If the value is undefined, then we want to leave the cell as is
@@ -496,8 +501,8 @@ export class SpreadsheetRegionFormatter<T> {
                 // Check to see if the display formatting has been changed
                 if (this._formatting) {
                     let existingFormat = cell.getNumberFormat();
-                    let newFormatting = (this._formatting.hasKey(this._properties[c]) ?
-                        this._formatting.get(this._properties[c]) :
+                    let newFormatting = (this._formatting.hasKey(prop) ?
+                        this._formatting.get(prop) :
                         existingFormat
                     );
                     if (newFormatting !== existingFormat) {
@@ -507,8 +512,8 @@ export class SpreadsheetRegionFormatter<T> {
 
                 // Check to see if the notes have changed
                 if (this._notesCallback) {
-                    let newNote = (this._notesCallback.hasKey(this._properties[c]) ?
-                        this._notesCallback.get(this._properties[c])(data[this._properties[c]], data) :
+                    let newNote = (this._notesCallback.hasKey(prop) ?
+                        this._notesCallback.get(prop)(data[prop], data) :
                         ""
                     );
                     if (newNote !== cell.getNote()) {
