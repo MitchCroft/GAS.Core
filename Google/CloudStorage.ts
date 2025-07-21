@@ -1,6 +1,7 @@
 import { ICloudStorage } from "../Foundation/CloudStorage/Interfaces";
 import { Directory, File } from "../Foundation/CloudStorage/Objects";
 import { StringExtensions } from "../Foundation/Extensions";
+import { Mapping } from "../Foundation/Objects";
 
 /**
  * Implementation to allow for interaction with Google Drive for processing file data
@@ -58,6 +59,25 @@ export class GoogleCloudStorage implements ICloudStorage {
         // Create the file element in the drive
         let newFile = currentFolder.createFile(dataBlob);
         return this.createFileObject(newFile);
+    }
+
+    /**
+     * Assign meta data to a file within the cloud provider
+     * @param file The file that the meta data should be attached to
+     * @param metadata The collection of meta data entries that should be assigned to the file
+     */
+    public setFileMetadata(file: File, metadata: Mapping<string>): void {
+        Drive.Files.update({ properties: metadata }, file.id);
+    }
+
+    /**
+     * Retrieve a link to the specified file for processing
+     * @param file The file that is to have the share link retrieved for use
+     * @returns Returns the URL for external resource access
+     */
+    public getFileShareLink(file: File): string {
+        let metaData = Drive.Files.get(file.id, { fields: 'webViewLink' });
+        return metaData.webViewLink ?? "";
     }
 
     //PRIVATE

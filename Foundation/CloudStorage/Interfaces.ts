@@ -1,3 +1,4 @@
+import { Mapping } from "../Objects";
 import { Directory, File } from "./Objects";
 
 /**
@@ -29,4 +30,18 @@ export interface ICloudStorage {
      * @returns Returns a file description object for the created file
      */
     createFile(data: number[], mimeType: string, name: string, extension: string, directory: Directory | null): File;
+
+    /**
+     * Assign meta data to a file within the cloud provider
+     * @param file The file that the meta data should be attached to
+     * @param metadata The collection of meta data entries that should be assigned to the file
+     */
+    setFileMetadata(file: File, metadata: Mapping<string>): void;
+
+    /**
+     * Retrieve a link to the specified file for processing
+     * @param file The file that is to have the share link retrieved for use
+     * @returns Returns the URL for external resource access
+     */
+    getFileShareLink(file: File): string;
 }
