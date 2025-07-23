@@ -68,6 +68,7 @@ export class GoogleCloudStorage implements ICloudStorage {
      * @param name The name of the file that is to be searched for
      * @param directory [Optional] A directory that the search will be constrained to
      * @returns Returns the file that was found or null if unable to find
+     * @comment The file extension is expected to be a part of the name being searched for
      */
     public tryGetFileWithName(name: string, directory?: Directory): File | null {
         // Find all files with the name
@@ -75,10 +76,7 @@ export class GoogleCloudStorage implements ICloudStorage {
         while (iterator.hasNext()) {
             // Check to make sure the name is a direct match
             let currentFile = iterator.next();
-            let fullFileName = currentFile.getName();
-            let finalIndex = fullFileName.lastIndexOf('.');
-            let fileName = finalIndex >= 0 ? fullFileName.substring(0, finalIndex) : fullFileName;
-            if (fileName !== name) {
+            if (currentFile.getName() !== name) {
                 continue;
             }
 
