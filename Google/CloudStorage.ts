@@ -21,6 +21,40 @@ export class GoogleCloudStorage implements ICloudStorage {
     }
 
     /**
+     * Try to find a directory with a specific name
+     * @param name The name of the directory that is to be searched
+     * @param directory [Optional] A directory that the search will be constrained to
+     * @returns Returns the directory that was found or null if unable to find
+     */
+    public tryGetDirectoryWithName(name: string, directory?: Directory): Directory | null {
+        // Find all directories with the name
+        let iterator = DriveApp.getFoldersByName(name);
+        while (iterator.hasNext()) {
+            // Check to make sure the name is a direct match
+            let currentFolder = iterator.next();
+            if (currentFolder.getName() !== name) {
+                continue;
+            }
+
+            // If we're not limiting the search, first will do
+            let currentDirectory = this.createDirectoryObject(currentFolder);
+            if (directory === undefined) {
+                return currentDirectory;
+            }
+
+            // Check to see if this directory is within the specified search location
+            let testDirectory = currentDirectory.parent;
+            while (testDirectory !== null) {
+                if (testDirectory.id === directory.id) {
+                    return currentDirectory;
+                }
+                testDirectory = testDirectory.parent;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Retrieve the file object with the specified ID
      * @param id The ID of the file that is to be retrieved
      * @returns Returns the File object that corresponds to the ID
@@ -30,12 +64,49 @@ export class GoogleCloudStorage implements ICloudStorage {
     }
 
     /**
+     * Try to find a file with a specific name
+     * @param name The name of the file that is to be searched for
+     * @param directory [Optional] A directory that the search will be constrained to
+     * @returns Returns the file that was found or null if unable to find
+     */
+    public tryGetFileWithName(name: string, directory?: Directory): File | null {
+        // Find all files with the name
+        let iterator = DriveApp.getFilesByName(name);
+        while (iterator.hasNext()) {
+            // Check to make sure the name is a direct match
+            let currentFile = iterator.next();
+            let fullFileName = currentFile.getName();
+            let finalIndex = fullFileName.lastIndexOf('.');
+            let fileName = finalIndex >= 0 ? fullFileName.substring(0, finalIndex) : fullFileName;
+            if (fileName !== name) {
+                continue;
+            }
+
+            // If we're not limiting the search, first will do
+            let fileObj = this.createFileObject(currentFile);
+            if (directory === undefined) {
+                return fileObj;
+            }
+
+            // Check to see if this directory is within the specified search location
+            let testDirectory = fileObj.parent;
+            while (testDirectory !== null) {
+                if (testDirectory.id === directory.id) {
+                    return fileObj;
+                }
+                testDirectory = testDirectory.parent;
+            }
+        }
+        return null;
+    }
+
+    /**
      * Ensure that a specific directory exists within the cloud storage platform
      * @param path The path that is to be ensured exists, delineated with '/' characters. E.g. Parent/Child/Final/
      * @param parent [Optional] The parent directory that the specified path should be relative to. If null, will use the root drive folder
      * @returns Returns the directory description object for the specified directory
      */
-    public createDirectory(path: string, parent: Directory | null = null): Directory {
+    public createDirectory(path: string, parent?: Directory): Directory {
         // We need the main directory that operations will be based on
         let currentFolder = parent ? DriveApp.getFolderById(parent.id) : DriveApp.getRootFolder();
 
@@ -66,7 +137,7 @@ export class GoogleCloudStorage implements ICloudStorage {
      * @param directory [Optional] The parent directory where the file should be created. If null, will use the root drive folder
      * @returns Returns a file description object for the created file
      */
-    public createFile(data: number[], mimeType: string, name: string, extension: string, directory: Directory | null = null): File
+    public createFile(data: number[], mimeType: string, name: string, extension: string, directory?: Directory): File
     {
         // We need the main directory that operations will be based on
         let currentFolder = directory ? DriveApp.getFolderById(directory.id) : DriveApp.getRootFolder();
