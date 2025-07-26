@@ -36,7 +36,7 @@ export interface IEndpointOperation {
      * @param inputData The input data that has been received from the calling user
      * @returns Returns the text output of the operation that can be delivered back to the caller
      */
-    execute(inputData: JObject): GoogleAppsScript.Content.TextOutput;
+    execute(inputData: JObject): any;
 }
 
 /**
@@ -64,7 +64,7 @@ export interface IEndpointController {
     /**
      * Parse and perform the endpoint operations
      * @param eventData The collection of information that was received from the caller for processing
-     * @returns Returns the text output object for the operation that was performed
+     * @returns Returns the output object for the operation that was performed
      */
-    execute(eventData: GoogleAppsScript.Events.AppsScriptHttpRequestEvent): GoogleAppsScript.Content.TextOutput;
+    execute(eventData: GoogleAppsScript.Events.AppsScriptHttpRequestEvent): any;
 }

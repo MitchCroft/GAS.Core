@@ -167,7 +167,7 @@ export class EndpointController implements IInjectionTarget, IInitialisable, IEn
      * @param eventData The incoming event data that is to be processed and operated on
      * @returns Returns the output object from the operation for use by the caller
      */
-    public execute(eventData: GoogleAppsScript.Events.AppsScriptHttpRequestEvent): GoogleAppsScript.Content.TextOutput {
+    public execute(eventData: GoogleAppsScript.Events.AppsScriptHttpRequestEvent): any {
         // Check that the values have been initialised for use
         if (this._basicInputSchema === null || this._configurationProvider === null || this._accessGuard === null) {
             throw `NullReferenceException: Controller is missing required values, make sure construct and init have been raised before calling`;
@@ -231,14 +231,14 @@ export class EndpointController implements IInjectionTarget, IInitialisable, IEn
      * @param inputData The collection of input data from the caller that is to be processed
      * @returns Returns the output result from the operation to be returned to the caller for handling
      */
-    private executeWriteSaveOperation(operation: IEndpointOperation, inputData: JObject): GoogleAppsScript.Content.TextOutput {
+    private executeWriteSaveOperation(operation: IEndpointOperation, inputData: JObject): any {
         // If there is no access guard, this can't work
         if (this._accessGuard === null) {
             throw `NullReferenceException: There is no access guard value set to manage access to data`;
         }
 
         // We need to store the result of the operation to be returned
-        let delayedResult: GoogleAppsScript.Content.TextOutput | null = null;
+        let delayedResult: any | null = null;
         this._accessGuard.runAction(() => delayedResult = operation.execute(inputData));
 
         // We are expecting there to be data received from the operation

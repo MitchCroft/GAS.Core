@@ -62,9 +62,9 @@ export abstract class BaseEndpointOperation<TInput> implements IEndpointOperatio
     /**
      * Perform the actions that are required for processing this operation
      * @param inputData The input data that has been received from the calling user
-     * @returns Returns the text output of the operation that can be delivered back to the caller
+     * @returns Returns the output of the operation that can be delivered back to the caller
      */
-    public execute(inputData: JObject): GoogleAppsScript.Content.TextOutput {
+    public execute(inputData: JObject): any {
         // We want to try and process the data that has been received for this specific operation
         try {
             // If there is an input schema, we can check that the input values are good
@@ -108,7 +108,7 @@ export abstract class BaseEndpointOperation<TInput> implements IEndpointOperatio
      * @param inputData The input data that has been received from the calling user
      * @returns Returns a result object of the operation that has been processed for operation
      */
-    protected abstract performOperation(inputData: TInput): GoogleAppsScript.Content.TextOutput;
+    protected abstract performOperation(inputData: TInput): any;
 
     /**
      * Create the return object that can be processed by the caller
@@ -142,7 +142,7 @@ export abstract class BaseJsonEndpointOperation<TInput, TOutput extends DefaultE
      * @param inputData The input data that has been received from the calling user
      * @returns Returns a result object of the operation that has been processed for operation
      */
-    protected performOperation(inputData: TInput): GoogleAppsScript.Content.TextOutput {
+    protected performOperation(inputData: TInput): any {
         // We want to retrieve the data object for this operation
         let operationResult = this.gatherJsonResult(inputData);
 
