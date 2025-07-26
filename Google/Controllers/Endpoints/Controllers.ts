@@ -3,15 +3,79 @@ import { ILogger } from "../../../Foundation/Logging";
 import { IInjectionTarget, IInitialisable, IDependencyResolver } from "../../../Foundation/DI/Interfaces";
 import { Schema } from "../../../Foundation/Schema/Objects";
 import { SchemaBuilder } from "../../../Foundation/Schema/Builders";
-import { BasicValueValidation, BasicType, NullValueValidation } from "../../../Foundation/Schema/Validation";
-import { IConfigurationProvider, ConfigurationEntry, ConfigurationCollection } from "../../../Foundation/Configuration";
+import { BasicValueValidation, BasicType } from "../../../Foundation/Schema/Validation";
+import { IConfigurationProvider } from "../../../Foundation/Configuration";
 import { WriteAccessHandler } from "../../Handlers";
-import { IEndpointOperation, DefaultEndpointOutputData } from "./Interfaces";
+import { IEndpointOperation, DefaultEndpointOutputData, IFormatInput, IEndpointController } from "./Interfaces";
+import { StringExtensions } from "../../../Foundation/Extensions";
 
 /**
- * Base class that will be used for processing the required functionality of the 
+ * Process the input of GoogleAppsScript.Events.DoGet to determine the base input data object that can be processed in operations
  */
-export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.AppsScriptHttpRequestEvent> implements IInjectionTarget, IInitialisable {
+export class GetFormatInput implements IFormatInput {
+    /*----------Functions----------*/
+    //PUBLIC
+
+    /**
+     * Parse the supplied input data into an generic object that can be processed
+     * @param eventData The request object that is to be parsed into a workable data object
+     * @returns Returns a generic data object that can be parsed for object operations
+     */
+    public formatInputData(eventData: GoogleAppsScript.Events.AppsScriptHttpRequestEvent): JObject {
+        return this.formatGetInputData(eventData);
+    }
+
+    //PRIVATE
+
+    /**
+     * Parse the supplied input data into an generic object that can be processed
+     * @param eventData The request object that is to be parsed into a workable data object
+     * @returns Returns a generic data object that can be parsed for object operations
+     */
+    private formatGetInputData(eventData: GoogleAppsScript.Events.DoGet): JObject {
+        let input: JObject = {};
+        for (const prop in eventData.parameter) {
+            input[prop] = (eventData.parameters[prop].length > 1 ?
+                eventData.parameters[prop] :
+                eventData.parameter[prop]
+            );
+        }
+        return input;
+    }
+}
+
+/**
+ * Process the input of GoogleAppsScript.Events.DoPost to determine the base input data object that can be processed in operations
+ */
+export class PostFormatInput implements IFormatInput {
+    /*----------Functions----------*/
+    //PUBLIC
+
+    /**
+     * Parse the supplied input data into an generic object that can be processed
+     * @param eventData The request object that is to be parsed into a workable data object
+     * @returns Returns a generic data object that can be parsed for object operations
+     */
+    public formatInputData(eventData: GoogleAppsScript.Events.AppsScriptHttpRequestEvent): JObject {
+        return this.formatPostInputData(eventData as GoogleAppsScript.Events.DoPost);
+    }
+
+    //PRIVATE
+
+    /**
+     * Parse the supplied input data into an generic object that can be processed
+     * @param eventData The request object that is to be parsed into a workable data object
+     * @returns Returns a generic data object that can be parsed for object operations
+     */
+    private formatPostInputData(eventData: GoogleAppsScript.Events.DoPost): JObject {
+        return JSON.parse(eventData.postData.contents);
+    }
+}
+
+/**
+ * Handler for endpoint operations that need to process incoming request data and generate a result that can be returned to the caller
+ */
+export class EndpointController implements IInjectionTarget, IInitialisable, IEndpointController {
     /*----------Variables----------*/
     //PROTECTED
 
@@ -21,11 +85,26 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
     protected _logger: ILogger | null;
 
     /**
-     * The provider that can be used to retrieve the required configuration properties for operation
+     * The provider that can be used to retrieve the configuration properties for the operation
      */
     protected _configurationProvider: IConfigurationProvider | null;
 
     //PRIVATE
+
+    /**
+     * The configuration property name that will be used to retrieve the authentication token used for verifying request information
+     */
+    private readonly _authConfigKey: string;
+
+    /**
+     * The formatter object that will be used to format the input request data into a usable object
+     */
+    private readonly _inputFormatter: IFormatInput;
+
+    /**
+     * The collection of operations that are available for use with this controller
+     */
+    private readonly _operations: Dictionary<IEndpointOperation>;
 
     /**
      * Access guard that will be used to manage the write access of the elements
@@ -33,29 +112,26 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
     private _accessGuard: WriteAccessHandler | null;
 
     /**
-     * Lookup collection of the different operations that are available for processing
-     */
-    private _operations: Dictionary<IEndpointOperation> | null;
-
-    /**
-     * The default schema objects that are expected to be used for every type of request that is processed
+     * The basic schema object that is to be expected of all incoming requests to know how to process the request
      */
     private _basicInputSchema: Schema | null;
-    private _basicReturnSchema: Schema | null;
 
     /*----------Functions----------*/
     //PUBLIC
 
     /**
-     * Intialise this object with the default object references
+     * Initialise this object with the default object references required
+     * @param authConfigKey The configuration parameter that will be used to lookup the authentication token for the request performed
+     * @param inputFormatter The input formatter that will be used to parse the input request data into the generic object that can be processed
      */
-    public constructor() {
+    public constructor(authConfigKey: string, inputFormatter: IFormatInput) {
         this._logger = null;
         this._configurationProvider = null;
+        this._authConfigKey = authConfigKey;
+        this._inputFormatter = inputFormatter;
+        this._operations = new Dictionary<IEndpointOperation>();
         this._accessGuard = null;
-        this._operations = null;
         this._basicInputSchema = null;
-        this._basicReturnSchema = null;
     }
 
     /**
@@ -66,14 +142,11 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
         this._logger = resolver.resolve("ILogger") as ILogger;
         this._configurationProvider = resolver.resolve("IConfigurationProvider") as IConfigurationProvider;
         this._accessGuard = resolver.resolve("WriteAccessHandler") as WriteAccessHandler;
+
         let operations = resolver.resolveCollection("IEndpointOperation") as IEndpointOperation[];
-        this._operations = new Dictionary<IEndpointOperation>();
         for (let i = 0; i < operations.length; ++i) {
             this._logger.log(`Registering operation '${operations[i].name}' for use`);
-            this._operations.add(
-                operations[i].name,
-                operations[i]
-            );
+            this._operations.add(operations[i].name, operations[i]);
         }
     }
 
@@ -87,120 +160,68 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
             .addProperty("operation")
                 .addValueValidation(new BasicValueValidation(BasicType.String))
             .build();
-        this._basicReturnSchema = new SchemaBuilder()
-            .addProperty("code")
-                .addValueValidation(new BasicValueValidation(BasicType.Number))
-                .withDefault(500)
-            .addProperty("error")
-                .addValueValidation(new BasicValueValidation(BasicType.String))
-                .addValueValidation(new NullValueValidation())
-                .withDefault(null)
-            .addProperty("notes")
-                .addValueValidation(new BasicValueValidation(BasicType.String))
-                .addValueValidation(new NullValueValidation())
-                .withDefault(null)
-            .build();
     }
 
     /**
-     * Perform the collection of actions that can be delegated to based on the controller contents
-     * @param eventData The event data that is received from the root request that was made
-     * @returns Returns the output JSON data from the operation that was run
+     * Verify the incoming data and delegate control to the required operation to generate an output
+     * @param eventData The incoming event data that is to be processed and operated on
+     * @returns Returns the output object from the operation for use by the caller
      */
-    public execute(eventData: T): GoogleAppsScript.Content.TextOutput {
+    public execute(eventData: GoogleAppsScript.Events.AppsScriptHttpRequestEvent): GoogleAppsScript.Content.TextOutput {
         // Check that the values have been initialised for use
-        if (this._basicInputSchema === null || this._basicInputSchema === null || this._operations === null) {
+        if (this._basicInputSchema === null || this._configurationProvider === null || this._accessGuard === null) {
             throw `NullReferenceException: Controller is missing required values, make sure construct and init have been raised before calling`;
         }
 
-        // No matter what happens, we want to handle a return object
-        let operationOutputSchema: Schema | null = null;
+        // If something goes wrong, we'll need to handle an error response message
         try {
-            // We need to format the event data into a JSON object that we can use for processing requests
-            let inputData = this.retrieveInputData(eventData);
+            // Retrieve the formatted data from the input object
+            let inputData = this._inputFormatter.formatInputData(eventData);
 
-            // Validate the input data against the minimum expected
-            this._basicInputSchema.applyDefaultProperties(inputData);
+            // Validate the input against the minimum expected data
+            this._basicInputSchema?.applyDefaultProperties(inputData);
             if (!this._basicInputSchema.isValid(inputData)) {
-                return this.formatResultObject({
+                return this.createJsonResultObject({
                     code: 422,
                     error: this._basicInputSchema.failureReason,
                     notes: null
                 });
             }
 
-            // Check the authentication token supplied against the supplied
-            let requiredAuthToken = this.getAuthenticationToken();
-            if (requiredAuthToken !== null && requiredAuthToken !== inputData.authToken) {
-                return this.formatResultObject({
+            // Check the authentication token against the the specified
+            let authToken = this._configurationProvider.getConfigValue(this._authConfigKey);
+            if (!StringExtensions.isNullOrEmpty(authToken) && authToken !== inputData.authToken) {
+                return this.createJsonResultObject({
                     code: 403,
                     error: "Received authentication token doesn't match",
                     notes: null
                 });
             }
 
-            // We need to check if there is a nominated operation to run
+            // Check to see if we have an operation that can be used
             if (!this._operations.hasKey(inputData.operation)) {
-                return this.formatResultObject({
-                    code: 400,
+                return this.createJsonResultObject({
+                    code: 404,
                     error: `Invalid operation type '${inputData.operation}'`,
                     notes: null
                 });
             }
 
-            // We can get the operation to do additional checks
+            // Perform the operation that will be processed
             let operation = this._operations.get(inputData.operation);
-
-            // If there is an input schema, check to make sure the values are good
-            let operationInputSchema = operation.getInputSchema();
-            if (operationInputSchema !== null) {
-                operationInputSchema.applyDefaultProperties(inputData);
-                if (!operationInputSchema.isValid(inputData)) {
-                    return this.formatResultObject(
-                        {
-                            code: 422,
-                            error: operationInputSchema.failureReason,
-                            notes: operation.name
-                        }
-                    );
-                }
-            }
-
-            // Run the operation and handle the result format
-            operationOutputSchema = operation.getOutputSchema();
-            return this.formatResultObject(
-                operation.requiresWrite ? this.executeWriteSafeOperation(operation, inputData) : operation.execute(inputData),
-                operationOutputSchema
-            );
+            return operation.requiresWrite ? this.executeWriteSaveOperation(operation, inputData) : operation.execute(inputData);
         }
 
-        // If anything goes wrong, we're just going to return the error result
-        catch (ex) {
-            return this.formatResultObject(
-                {
-                    code: 500,
-                    error: `An unexpected exception was thrown while processing the request: ${ex}`,
-                    notes: null
-                },
-                operationOutputSchema
-            );
+        // Catch any errors to be sent back
+        catch (ex: any) {
+            this._logger?.exception("An unepected error occurred when processing the incoming response", ex);
+            return this.createJsonResultObject({
+                code: 500,
+                error: "An unexpected exception was thrown while processing the request",
+                notes: ex.toString()
+            });
         }
     }
-
-    //PROTECTED
-
-    /**
-     * Allows implementing classes to format the supplied data and return a generic object that can be processed
-     * @param eventData The event data object that has been passed and needs to be processed
-     * @returns Returns the JSON object with all the values sent by the user ready to be processed
-     */
-    protected abstract retrieveInputData(eventData: T): JObject;
-
-    /**
-     * Retrieve the authentication token that must be matched against for the required endpoint to work
-     * @returns Returns a string that will be matched against the supplied input data or null if no authentication is required
-     */
-    protected abstract getAuthenticationToken(): string;
 
     //PRIVATE
 
@@ -208,21 +229,19 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
      * Run the specified operation with write safe protections
      * @param operation The operation that is to be executed
      * @param inputData The collection of input data from the caller that is to be processed
-     * @returns Returns the output object that can be returned to the caller for processing
+     * @returns Returns the output result from the operation to be returned to the caller for handling
      */
-    private executeWriteSafeOperation(operation: IEndpointOperation, inputData: JObject): DefaultEndpointOutputData {
+    private executeWriteSaveOperation(operation: IEndpointOperation, inputData: JObject): GoogleAppsScript.Content.TextOutput {
         // If there is no access guard, this can't work
         if (this._accessGuard === null) {
             throw `NullReferenceException: There is no access guard value set to manage access to data`;
         }
 
-        // We need to get a result from this operation
-        let delayedResult: DefaultEndpointOutputData | null = null;
-
-        // Wait for write access to the data
+        // We need to store the result of the operation to be returned
+        let delayedResult: GoogleAppsScript.Content.TextOutput | null = null;
         this._accessGuard.runAction(() => delayedResult = operation.execute(inputData));
 
-        // We are expecting there to be data retrieved from the operation
+        // We are expecting there to be data received from the operation
         if (delayedResult === null) {
             throw `ArgumentNullException: Didn't receive any result data from the operation '${operation.name}'`;
         }
@@ -230,175 +249,12 @@ export abstract class BaseEndpointController<T extends GoogleAppsScript.Events.A
     }
 
     /**
-     * Validate the return object to ensure it has the required elements before returning it to the caller
-     * @param payload The payload return object that will be processed for return to the caller
-     * @param resultSchema [Optional] And additional return schema that will be applied to returned elements for validation
-     * @returns Returns the output element that will be received by the caller
-     */
-    private formatResultObject(payload: DefaultEndpointOutputData, resultSchema: Schema | null = null): GoogleAppsScript.Content.TextOutput {
-        // Find the collection of schema that are needed for processing
-        let formatSchema = (resultSchema ? 
-            [ resultSchema, this._basicReturnSchema ] :
-            [ this._basicReturnSchema ]
-        );
-
-        // We want to iterate through and make sure that all schema are satisfied
-        for (let i = 0; i < formatSchema.length; ++i) {
-            if (formatSchema[i] === null) {
-                throw `NullReferenceException: Supplied schema object at index ${i} is null`;
-            }
-            formatSchema[i]!.applyDefaultProperties(payload);
-            if (!formatSchema[i]!.isValid(payload)) {
-                return this.formatResultObject({
-                    code: 422,
-                    error: `Return object failed to meet schema requirements: ${formatSchema[i]!.failureReason}`,
-                    notes: JSON.stringify(payload)
-                });
-            }
-        }
-        return this.createResultObject(payload);
-    }
-
-    /**
      * Create the return object that can be processed by the caller
      * @param payload The payload object that will be added to the handler
      * @returns Returns the output element that will be received by the caller
      */
-    private createResultObject(payload: JObject): GoogleAppsScript.Content.TextOutput {
+    private createJsonResultObject(payload: DefaultEndpointOutputData): GoogleAppsScript.Content.TextOutput {
         return ContentService.createTextOutput(JSON.stringify(payload))
             .setMimeType(ContentService.MimeType.JSON);
-    }
-}
-
-/**
- * Manage the execution of a GET web request for the required operations
- */
-export class GetEndpointController extends BaseEndpointController<GoogleAppsScript.Events.DoGet> {
-    /*----------Variables----------*/
-    //PRIVATE
-
-    /**
-     * The collection of properties that are required for operating the GET logic
-     */
-    private readonly REQUIRED_PREFERENCES: ConfigurationCollection;
-
-    /**
-     * The collection of preference values that have been received for processing
-     */
-    private _preferences: JObject | null;
-
-    /*----------Functions----------*/
-    //PUBLIC
-
-    /**
-     * Create this object with the default object references
-     * @param authConfigKey The configuration preference key that will be used for validing all requests made of this controller
-     */
-    public constructor(authConfigKey: string) {
-        super();
-        this.REQUIRED_PREFERENCES = Object.freeze({
-            authToken: new ConfigurationEntry(authConfigKey)
-        });
-        this._preferences = null;
-    }
-
-    /**
-     * Initialise this object so that it's ready to be used
-     */
-    public init(): void {
-        super.init();
-        if (this._configurationProvider === null) {
-            throw `NullReferenceException: Unable to retrieve configuration values, provider has not been set`;
-        }
-        this._preferences = this._configurationProvider.getConfigValues(this.REQUIRED_PREFERENCES);
-    }
-
-    //PROTECTED
-
-    /**
-     * Allows implementing classes to format the supplied data and return a generic object that can be processed
-     * @param eventData The event data object that has been passed and needs to be processed
-     * @returns Returns the JSON object with all the values sent by the user ready to be processed
-     */
-    protected retrieveInputData(eventData: GoogleAppsScript.Events.DoGet): JObject {
-        let input: JObject = {};
-        for (const prop in eventData.parameter) {
-            input[prop] = (eventData.parameters[prop].length > 1 ?
-                eventData.parameters[prop] :
-                eventData.parameter[prop]
-            );
-        }
-        return input;
-    }
-
-    /**
-     * Retrieve the authentication token that must be matched against for the required endpoint to work
-     * @returns Returns a string that will be matched against the supplied input data or null if no authentication is required
-     */
-    protected getAuthenticationToken(): string {
-        return this._preferences?.authToken ?? "";
-    }
-}
-
-/**
- * Manage the execution of a POST web request for the required operations
- */
-export class PostEndpointController extends BaseEndpointController<GoogleAppsScript.Events.DoPost> {
-    /*----------Variables----------*/
-    //PRIVATE
-
-    /**
-     * The collection of properties that are required for operating the POST logic
-     */
-    private readonly REQUIRED_PREFERENCES: ConfigurationCollection;
-
-    /**
-     * The collection of preference values that have been received for processing
-     */
-    private _preferences: JObject | null;
-
-    /*----------Functions----------*/
-    //PUBLIC
-
-    /**
-     * Create this object with the default object references
-     * @param authConfigKey The configuration preference key that will be used for validing all requests made of this controller
-     */
-    public constructor(authConfigKey: string) {
-        super();
-        this.REQUIRED_PREFERENCES = Object.freeze({
-            authToken: new ConfigurationEntry(authConfigKey)
-        });
-        this._preferences = null;
-    }
-
-    /**
-     * Initialise this object so that it's ready to be used
-     */
-    public init(): void {
-        super.init();
-        if (this._configurationProvider === null) {
-            throw `NullReferenceException: Unable to retrieve configuration values, provider has not been set`;
-        }
-        this._preferences = this._configurationProvider.getConfigValues(this.REQUIRED_PREFERENCES);
-    }
-
-    //PROTECTED
-
-    /**
-     * Allows implementing classes to format the supplied data and return a generic object that can be processed
-     * @param eventData The event data object that has been passed and needs to be processed
-     * @returns Returns the JSON object with all the values sent by the user ready to be processed
-     */
-    protected retrieveInputData(eventData: GoogleAppsScript.Events.DoPost): JObject {
-        return JSON.parse(eventData.postData.contents);
-    }
-
-    /**
-     * Retrieve the authentication token that must be matched against for the required endpoint to work
-     * @returns Returns a string that will be matched against the supplied input data or null if no authentication is required
-     */
-    protected getAuthenticationToken(): string {
-        return this._preferences?.authToken ?? "";
     }
 }
