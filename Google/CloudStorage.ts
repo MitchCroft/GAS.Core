@@ -168,6 +168,16 @@ export class GoogleCloudStorage implements ICloudStorage {
         resourceFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
         return resourceFile.getUrl();
     }
+    
+    /**
+     * Retrieve the binary file data for the specified entry
+     * @param file The file object that is to have the required data retrieved
+     * @returns Returns the binary data from the file that was found
+     */
+    public getFileData(file: File): number[] {
+        let resourceFile = DriveApp.getFileById(file.id);
+        return resourceFile.getBlob().getBytes() as number[];
+    }
 
     //PRIVATE
 

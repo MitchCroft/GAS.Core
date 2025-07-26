@@ -70,4 +70,11 @@ export interface ICloudStorage {
      * @returns Returns the URL for external resource access
      */
     getFileShareLink(file: File): string;
+
+    /**
+     * Retrieve the binary file data for the specified entry
+     * @param file The file object that is to have the required data retrieved
+     * @returns Returns the binary data from the file that was found
+     */
+    getFileData(file: File): number[];
 }
