@@ -125,6 +125,9 @@ export abstract class APIBase {
         for (const key in queryParameters) {
             // How we handle the value will depend on if it's a collection
             let value = queryParameters[key];
+            if (value === undefined) {
+                continue;
+            }
 
             // If this is an array of values, we will need to iterate them
             if (Array.isArray(value)) {
