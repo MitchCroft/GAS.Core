@@ -65,14 +65,28 @@ export interface IDependencyResolver {
      * @param key The key that the defined instance is stored under for processing
      * @returns Returns the instance of the object in the collection that can be used
      */
-    resolve<T>(key: string): T | undefined;
+    resolve<T>(key: string): T;
+
+    /**
+     * Retrieve the registered value that is registered in the container
+     * @param key The key that the defined instance would be stored under for processing
+     * @returns Returns the instance of the object in the collection if it's available or null if not contained
+     */
+    resolveOptional<T>(key: string): T | null;
 
     /**
      * Retrieve the registered values that are registered in the container
      * @param key The key that the defined instances are stored under for processing
      * @returns Returns an array of the object instances in the collection that can be used
      */
-    resolveCollection<T>(key: string): T[] | undefined;
+    resolveCollection<T>(key: string): T[];
+
+    /**
+     * Retrieve the registered values that are registered in the container
+     * @param key The key that the defined instances are stored under for processing
+     * @returns Returns an array of the object instances in the collection that can be used or null if not defined
+     */
+    resolveCollectionOptional<T>(key: string): T[] | null;
 }
 
 /**

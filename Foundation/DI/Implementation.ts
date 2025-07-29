@@ -122,7 +122,7 @@ export class DependencyResolver implements IDependencyResolver {
      * @param key The key for the object that is to be looked up
      * @returns Returns the object reference that is stored under the specified key
      */
-    public resolve<T>(key: string): T | undefined {
+    public resolve<T>(key: string): T {
         // If there is no object in the collection under the key, we can't do anything at this level
         if (!this._register.hasKey(key)) {
             // If we have a parent resolver, try and use that
@@ -140,11 +140,31 @@ export class DependencyResolver implements IDependencyResolver {
     }
 
     /**
+     * Retrieve the registered value that is registered in the container
+     * @param key The key that the defined instance would be stored under for processing
+     * @returns Returns the instance of the object in the collection if it's available or null if not contained
+     */
+    public resolveOptional<T>(key: string): T | null {
+        // If there is no object in the collection under the key, we can't do anything at this level
+        if (!this._register.hasKey(key)) {
+            // If we have a parent resolver, try and use that
+            return (this._parent !== null ?
+                this._parent.resolveOptional<T>(key) :
+                null
+            );
+        }
+
+        // Get the collection that is stored under the ID
+        let collection = this._register.get(key);
+        return collection[0] as T;
+    }
+
+    /**
      * Retrieve the registered values that are registered in the container
      * @param key The key that the defined instances are stored under for processing
      * @returns Returns an array of the object instances in the collection that can be used
      */
-    public resolveCollection<T>(key: string): T[] | undefined {
+    public resolveCollection<T>(key: string): T[] {
         // If there is no object in the collection under the key, we can't do anything at this level
         if (!this._register.hasKey(key)) {
             // If we have a parent resolver, try and use that
@@ -154,6 +174,24 @@ export class DependencyResolver implements IDependencyResolver {
 
             // If there is no parent, then we fail the resolve
             throw `KeyNotFoundException: Failed to resolve the object reference for the key '${key}'`;
+        }
+
+        // We can get the collection of elements contained and return them
+        return this._register.get(key) as T[];
+    }
+    
+    /**
+     * Retrieve the registered values that are registered in the container
+     * @param key The key that the defined instances are stored under for processing
+     * @returns Returns an array of the object instances in the collection that can be used
+     */
+    public resolveCollectionOptional<T>(key: string): T[] | null {
+        // If there is no object in the collection under the key, we can't do anything at this level
+        if (!this._register.hasKey(key)) {
+            return (this._parent !== null ?
+                this._parent.resolveCollectionOptional<T>(key) :
+                null
+            );
         }
 
         // We can get the collection of elements contained and return them

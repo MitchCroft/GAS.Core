@@ -143,10 +143,12 @@ export class EndpointController implements IInjectionTarget, IInitialisable, IEn
         this._configurationProvider = resolver.resolve("IConfigurationProvider") as IConfigurationProvider;
         this._accessGuard = resolver.resolve("WriteAccessHandler") as WriteAccessHandler;
 
-        let operations = resolver.resolveCollection("IEndpointOperation") as IEndpointOperation[];
-        for (let i = 0; i < operations.length; ++i) {
-            this._logger.log(`Registering operation '${operations[i].name}' for use`);
-            this._operations.add(operations[i].name, operations[i]);
+        let operations = resolver.resolveCollectionOptional("IEndpointOperation") as IEndpointOperation[];
+        if (operations !== null) {
+            for (let i = 0; i < operations.length; ++i) {
+                this._logger.log(`Registering operation '${operations[i].name}' for use`);
+                this._operations.add(operations[i].name, operations[i]);
+            }
         }
     }
 
